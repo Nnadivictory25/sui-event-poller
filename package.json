@@ -9,10 +9,23 @@
     "README.md",
     "LICENSE"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nnadivictory25/sui-event-poller.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Nnadivictory25/sui-event-poller/issues"
+  },
+  "homepage": "https://github.com/Nnadivictory25/sui-event-poller#readme",
   "scripts": {
     "build": "tsc",
     "prepare": "npm run build",
-    "test": "jest"
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "keywords": [
     "sui",
