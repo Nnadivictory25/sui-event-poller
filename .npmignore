@@ -1,0 +1,18 @@
+# Source files
+src/
+__tests__/
+
+# Config files
+tsconfig.json
+jest.config.mjs
+.gitignore
+.npmignore
+
+# Development files
+.DS_Store
+*.log
+coverage/
+
+# IDE
+.vscode/
+.idea/ 

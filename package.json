@@ -1,0 +1,35 @@
+{
+  "name": "@nnadivictory/sui-event-poller",
+  "version": "1.0.0",
+  "description": "Memory-efficient event poller for Sui blockchain",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "test": "jest"
+  },
+  "keywords": [
+    "sui",
+    "blockchain",
+    "events",
+    "poller"
+  ],
+  "author": "Nnadi Victory",
+  "license": "MIT",
+  "dependencies": {
+    "@mysten/sui": "^1.29.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.0.0",
+    "@types/node": "^20.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "typescript": "^5.0.0"
+  }
+}
