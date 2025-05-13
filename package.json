@@ -1,6 +1,6 @@
 {
   "name": "@nnadivictory/sui-event-poller",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Memory-efficient event poller for Sui blockchain",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
