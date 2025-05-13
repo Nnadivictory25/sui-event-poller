@@ -42,13 +42,17 @@ interface CursorState {
  * @example
  * ```typescript
  * const poller = new EventPoller({
- *   client,
+ *   client: new SuiClient({ url: 'https://fullnode.mainnet.sui.io:443' }),
  *   filters: [{
  *     MoveEventType: '0x...::module::Event'
  *   }],
- *   onNewEvents: (events) => console.log('New events:', events)
+ *   interval: 5000,
+ *   onNewEvents: (events) => console.log('New events:', events),
+ *   onError: (error) => console.error('Error:', error),
+ *   startFromNow: true,
+ *   memoryWindow: 3600000, // 1 hour
+ *   maxStoredEvents: 1000
  * });
- * poller.start();
  * ```
  */
 export class EventPoller {
@@ -67,7 +71,24 @@ export class EventPoller {
 
     /**
      * Creates a new EventPoller instance
-     * @param options - Configuration options for the poller
+     * @param {Object} options - Configuration options for the poller
+     * @param {SuiClient} options.client - Sui client instance to use for querying events
+     * @param {SuiEventFilter[]} options.filters - Array of event filters to monitor
+     * @param {number} [options.interval=5000] - Polling interval in milliseconds
+     * @param {function(SuiEvent[]): void} [options.onNewEvents=()=>{}] - Callback function for new events
+     * @param {function(Error): void} [options.onError=(error)=>console.error] - Callback function for errors
+     * @param {boolean} [options.startFromNow=true] - Whether to only process events from now onwards
+     * @param {number} [options.memoryWindow=3600000] - How long to keep event IDs in memory in milliseconds (default: 1 hour)
+     * @param {number} [options.maxStoredEvents=1000] - Maximum number of event IDs to store per filter
+     * @example
+     * ```typescript
+     * const poller = new EventPoller({
+     *   client: new SuiClient({ url: 'https://fullnode.mainnet.sui.io:443' }),
+     *   filters: [{ MoveEventType: '0x...::module::Event' }],
+     *   interval: 5000,
+     *   onNewEvents: (events) => console.log('New events:', events)
+     * });
+     * ```
      */
     constructor({
         client,
@@ -116,6 +137,8 @@ export class EventPoller {
         console.log('🚀 Starting EventPoller...');
 
         this.pollEvents().catch(this.onError);
+        console.log("🟢 EventPoller started\n=>Polling Events...");
+
 
         this.intervalId = setInterval(() => {
             this.pollEvents().catch(this.onError);
