@@ -28,8 +28,6 @@ export type EventPollerOptions = {
  * @interface CursorState
  */
 interface CursorState {
-    /** Current cursor position for pagination */
-    cursor: { txDigest: string; eventSeq: string } | null;
     /** Timestamp of the last processed event */
     lastProcessedTimestamp: number;
     /** Map of processed event IDs to their timestamps */
@@ -58,7 +56,7 @@ export class EventPoller {
     private interval: number;
     private onNewEvents: (events: SuiEvent[]) => void;
     private onError: (error: Error) => void;
-    private cursors: Map<string, CursorState>;
+    private states: Map<string, CursorState>;
     private isPolling: boolean = false;
     private intervalId?: ReturnType<typeof setInterval>;
     private startTime: number;
@@ -106,11 +104,10 @@ export class EventPoller {
         this.memoryWindow = memoryWindow;
         this.maxStoredEvents = maxStoredEvents;
 
-        this.cursors = new Map(
+        this.states = new Map(
             filters.map(filter => [
                 JSON.stringify(filter),
                 {
-                    cursor: null,
                     lastProcessedTimestamp: this.startTime,
                     processedEventIds: new Map<string, number>()
                 }
@@ -178,7 +175,7 @@ export class EventPoller {
         const now = Date.now();
         const cutoffTime = now - this.memoryWindow;
 
-        for (const [filterKey, state] of this.cursors.entries()) {
+        for (const [filterKey, state] of this.states.entries()) {
             for (const [eventId, timestamp] of state.processedEventIds.entries()) {
                 if (timestamp < cutoffTime) {
                     state.processedEventIds.delete(eventId);
@@ -195,7 +192,7 @@ export class EventPoller {
                 }
             }
 
-            this.cursors.set(filterKey, state);
+            this.states.set(filterKey, state);
         }
 
         console.log(`🧹 Cleaned up old events. Current memory usage: ${this.getMemoryUsage()}`);
@@ -208,7 +205,7 @@ export class EventPoller {
      */
     private getMemoryUsage(): string {
         let totalEvents = 0;
-        for (const state of this.cursors.values()) {
+        for (const state of this.states.values()) {
             totalEvents += state.processedEventIds.size;
         }
         return `${totalEvents} events tracked`;
@@ -250,12 +247,11 @@ export class EventPoller {
      */
     private async fetchNewEventsForFilter(filter: SuiEventFilter): Promise<SuiEvent[]> {
         const filterKey = JSON.stringify(filter);
-        const state = this.cursors.get(filterKey)!;
+        const state = this.states.get(filterKey)!;
 
         try {
             const response = await this.client.queryEvents({
                 query: filter,
-                cursor: state.cursor,
                 limit: 50,
                 order: 'descending'
             });
@@ -275,19 +271,16 @@ export class EventPoller {
             });
 
             if (newEvents.length > 0) {
-                const lastEvent = newEvents[newEvents.length - 1];
-                state.cursor = {
-                    txDigest: lastEvent.id.txDigest,
-                    eventSeq: lastEvent.id.eventSeq
-                };
-                state.lastProcessedTimestamp = Number(lastEvent.timestampMs);
+                // Update the last processed timestamp with the latest event time
+                const latestEventTime = Math.max(...newEvents.map(e => Number(e.timestampMs)));
+                state.lastProcessedTimestamp = Math.max(state.lastProcessedTimestamp, latestEventTime);
 
                 newEvents.forEach(event => {
                     const eventId = `${event.id.txDigest}:${event.id.eventSeq}`;
                     state.processedEventIds.set(eventId, now);
                 });
 
-                this.cursors.set(filterKey, state);
+                this.states.set(filterKey, state);
             }
 
             return newEvents;
