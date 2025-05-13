@@ -47,11 +47,8 @@ interface CursorState {
  *     MoveEventType: '0x...::module::Event'
  *   }],
  *   interval: 5000,
- *   onNewEvents: (events) => console.log('New events:', events),
- *   onError: (error) => console.error('Error:', error),
- *   startFromNow: true,
- *   memoryWindow: 3600000, // 1 hour
- *   maxStoredEvents: 1000
+ *   onNewEvents: (events) => console.log('✨ New events:', events),
+ *   onError: (error) => console.error('🔴 Error:', error)
  * });
  * ```
  */
@@ -255,44 +252,49 @@ export class EventPoller {
         const filterKey = JSON.stringify(filter);
         const state = this.cursors.get(filterKey)!;
 
-        const response = await this.client.queryEvents({
-            query: filter,
-            cursor: state.cursor,
-            limit: 50,
-            order: 'descending'
-        });
-
-        const events = response.data;
-
-        if (events.length === 0) {
-            return [];
-        }
-
-        const now = Date.now();
-
-        const newEvents = events.filter(event => {
-            const eventTime = Number(event.timestampMs);
-            const eventId = `${event.id.txDigest}:${event.id.eventSeq}`;
-            return eventTime > state.lastProcessedTimestamp && !state.processedEventIds.has(eventId);
-        });
-
-        if (newEvents.length > 0) {
-            const lastEvent = newEvents[newEvents.length - 1];
-            state.cursor = {
-                txDigest: lastEvent.id.txDigest,
-                eventSeq: lastEvent.id.eventSeq
-            };
-            state.lastProcessedTimestamp = Number(lastEvent.timestampMs);
-
-            newEvents.forEach(event => {
-                const eventId = `${event.id.txDigest}:${event.id.eventSeq}`;
-                state.processedEventIds.set(eventId, now);
+        try {
+            const response = await this.client.queryEvents({
+                query: filter,
+                cursor: state.cursor,
+                limit: 50,
+                order: 'descending'
             });
 
-            this.cursors.set(filterKey, state);
-        }
+            const events = response.data;
 
-        return newEvents;
+            if (events.length === 0) {
+                return [];
+            }
+
+            const now = Date.now();
+
+            const newEvents = events.filter(event => {
+                const eventTime = Number(event.timestampMs);
+                const eventId = `${event.id.txDigest}:${event.id.eventSeq}`;
+                return eventTime > state.lastProcessedTimestamp && !state.processedEventIds.has(eventId);
+            });
+
+            if (newEvents.length > 0) {
+                const lastEvent = newEvents[newEvents.length - 1];
+                state.cursor = {
+                    txDigest: lastEvent.id.txDigest,
+                    eventSeq: lastEvent.id.eventSeq
+                };
+                state.lastProcessedTimestamp = Number(lastEvent.timestampMs);
+
+                newEvents.forEach(event => {
+                    const eventId = `${event.id.txDigest}:${event.id.eventSeq}`;
+                    state.processedEventIds.set(eventId, now);
+                });
+
+                this.cursors.set(filterKey, state);
+            }
+
+            return newEvents;
+        } catch (error) {
+            console.error('🔴 Error fetching events:', error);
+            throw error;
+        }
     }
 
     /**
